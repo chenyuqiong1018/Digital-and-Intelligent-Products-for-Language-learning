@@ -14,69 +14,79 @@ st.set_page_config(
 
 # --- 2. 图片转 Base64 (用于嵌入蓝色框) ---
 def get_base64_of_bin_file(bin_file):
-    if not os.path.exists(bin_file): return ""
     with open(bin_file, 'rb') as f:
         data = f.read()
     return base64.b64encode(data).decode()
 
 
-logo_base64 = get_base64_of_bin_file('logo.png')
+try:
+    logo_base64 = get_base64_of_bin_file('logo.png')
+except:
+    logo_base64 = ""
 
-# --- 3. 增强版自定义 CSS (重点优化选项卡) ---
+# --- 3. 增强版自定义 CSS ---
 st.markdown(f"""
     <style>
-    /* 1. 蓝色标题框保持不变 */
+    /* 1. 蓝色大标题框布局 */
     .header-box {{
-        background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+        background: linear-gradient(135deg, #2b5876 0%, #4e4376 100%);
+        background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); /* 保持上一版的经典深蓝渐变 */
         padding: 40px 20px;
         border-radius: 15px;
         color: white;
         text-align: center;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-        margin-bottom: 40px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        margin-bottom: 30px;
         display: flex;
         flex-direction: column;
         align-items: center;
+        justify-content: center;
     }}
-    .header-logo {{ width: 100px; margin-bottom: 20px; }}
-    .header-title {{ font-size: 2.8rem; font-weight: 800; margin: 0; letter-spacing: 2px; }}
-    .header-subtitle {{ font-size: 1.1rem; margin-top: 15px; opacity: 0.9; }}
+    .header-logo {{
+        width: 100px;
+        margin-bottom: 20px;
+        filter: drop-shadow(0px 4px 4px rgba(0,0,0,0.2));
+    }}
+    .header-title {{
+        font-size: 2.8rem;
+        font-weight: 800;
+        margin: 0;
+        padding: 0;
+        letter-spacing: 2px;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }}
+    .header-subtitle {{
+        font-size: 1.1rem;
+        margin-top: 15px;
+        opacity: 0.9;
+        font-weight: 400;
+        letter-spacing: 1px;
+    }}
 
-    /* 2. 选项卡 (Tabs) 深度美化：居中、放大、加粗、拉开距离 */
+    /* 2. 导航栏居中并平分宽度 */
     div[data-baseweb="tab-list"] {{
         justify-content: center !important;
-        gap: 150px !important;  /* 增加两个选项卡之间的物理距离，不要挨着 */
-        background-color: transparent !important;
-        border-bottom: 2px solid #eee !important;
-        margin-bottom: 30px !important;
+        gap: 0px !important;
+        width: 100% !important;
     }}
-
     div[data-baseweb="tab"] {{
-        height: 60px !important;
-        background-color: transparent !important;
-        border: none !important;
+        flex: 1 !important;
+        text-align: center !important;
+        justify-content: center !important;
+        font-size: 1.1rem !important;
+        height: 50px !important;
     }}
 
-    div[data-baseweb="tab"] p {{
-        font-size: 1.6rem !important; /* 字体放大 */
-        font-weight: 800 !important;   /* 字体加粗 */
-        letter-spacing: 1px !important;
-    }}
-
-    /* 选中状态下的下划线加粗和颜色变化 */
-    div[data-baseweb="tab"][aria-selected="true"] {{
-        border-bottom: 5px solid #1e3a8a !important; /* 选中的下划线更厚更蓝 */
-        color: #1e3a8a !important;
-    }}
-
-    /* 3. 卡片标签样式保持 */
+    /* 3. 恢复上一版的卡片标签样式 */
+    .tag-container {{ margin: 0.8rem 0; }}
     .tag {{
         display: inline-block;
         padding: 4px 12px;
         border-radius: 20px;
         font-size: 0.8rem;
-        font-weight: 600;
+        font-weight: 500;
         margin-right: 8px;
+        margin-bottom: 5px;
     }}
     .tag-blue {{ background-color: #e3f2fd; color: #1976d2; border: 1px solid #bbdefb; }}
     .tag-green {{ background-color: #f1f8e9; color: #388e3c; border: 1px solid #dcedc8; }}
@@ -84,8 +94,8 @@ st.markdown(f"""
 
     .result-count {{
         color: #666;
-        font-size: 1rem;
-        margin-bottom: 20px;
+        font-size: 0.95rem;
+        margin: 20px 0;
         font-style: italic;
         text-align: center;
     }}
@@ -117,8 +127,8 @@ def load_data(path, sheet_name):
         return None
 
 
-# --- 6. 导航切换 (Tabs：居中、拉开、放大) ---
-tab_web, tab_app = st.tabs(["🌐 网站检索", "📱 APP 检索"])
+# --- 6. 导航切换 (Tabs 居中平分模式) ---
+tab_web, tab_app = st.tabs(["🌐 网站检索 (Website Search)", "📱 APP 检索 (APP Search)"])
 
 # --- 7. 网站检索逻辑 ---
 with tab_web:
@@ -146,7 +156,7 @@ with tab_web:
                 with c1:
                     st.markdown(f"### {row['网站名称']}")
                     st.markdown(f"""
-                        <div>
+                        <div class="tag-container">
                             <span class="tag tag-blue">📍 {row['国家/地区']}</span>
                             <span class="tag tag-green">📁 {row['类别']}</span>
                             <span class="tag tag-orange">💳 {row['是否免费']}</span>
@@ -190,7 +200,7 @@ with tab_app:
                 with c1:
                     st.markdown(f"### {name}")
                     st.markdown(f"""
-                        <div>
+                        <div class="tag-container">
                             <span class="tag tag-blue">状态：{row['是否可以打开']}</span>
                             <span class="tag tag-green">更新：{row['是否仍在更新']}</span>
                         </div>
