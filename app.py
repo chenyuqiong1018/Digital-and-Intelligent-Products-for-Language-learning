@@ -10,53 +10,50 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- 2. 自定义 CSS 样式 ---
+# --- 2. 恢复上一版的自定义 CSS 样式 (保持美观) ---
 st.markdown("""
     <style>
-    /* 标题区域 */
-    .header-container {
-        display: flex;
-        align-items: center;
-        justify-content: center;
+    /* 标题栏渐变背景 */
+    .stHeader {
+        background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+        padding: 1.5rem;
+        border-radius: 12px;
+        color: white;
+        text-align: center;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         margin-bottom: 5px;
-    }
-    .header-text {
-        font-size: 2.5rem;
-        font-weight: bold;
-        background: linear-gradient(45deg, #1e3a8a, #3b82f6);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin-left: 15px;
     }
     .sub-header {
         text-align: center;
-        color: #888;
+        color: #666;
         font-size: 0.9rem;
-        margin-bottom: 25px;
+        margin-bottom: 20px;
     }
-    /* 导航按钮样式 */
-    .stButton>button {
-        width: 100%;
+    /* 标签样式 (恢复彩色版本) */
+    .tag-container { margin: 0.5rem 0; }
+    .tag {
+        display: inline-block;
+        padding: 3px 10px;
         border-radius: 20px;
-        height: 3em;
-        font-weight: bold;
+        font-size: 0.75rem;
+        font-weight: 500;
+        margin-right: 6px;
+        margin-bottom: 5px;
     }
-    /* 结果报数 */
+    .tag-blue { background-color: #e3f2fd; color: #1976d2; border: 1px solid #bbdefb; }
+    .tag-green { background-color: #f1f8e9; color: #388e3c; border: 1px solid #dcedc8; }
+    .tag-orange { background-color: #fff3e0; color: #f57c00; border: 1px solid #ffe0b2; }
+
+    /* 报数小字 */
     .result-count {
         color: #666;
         font-size: 0.9rem;
-        margin: 10px 0;
+        margin-bottom: 1rem;
         font-style: italic;
     }
-    /* 卡片标签 */
-    .tag {
-        display: inline-block;
-        padding: 2px 10px;
-        border-radius: 15px;
-        font-size: 0.7rem;
-        margin-right: 5px;
-        border: 1px solid #ddd;
-    }
+    /* 隐藏顶部默认装饰 */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
     </style>
     """, unsafe_allow_html=True)
 
@@ -70,125 +67,133 @@ def load_data(path, sheet_name):
     try:
         df = pd.read_excel(path, sheet_name=sheet_name)
         df.columns = df.columns.str.strip()
-        return df.fillna('无')
+        return df.fillna('无').replace('*', '无')  # 将星号统一转为“无”
     except:
         return None
 
 
-# --- 4. 标题与页面切换状态 ---
-if 'page_type' not in st.session_state:
-    st.session_state.page_type = '网站'
+# --- 4. 标题栏 (Logo + 渐变标题 + 学院名) ---
+t_col1, t_col2, t_col3 = st.columns([1, 4, 1])
+with t_col2:
+    # 顶部 Logo 和 标题并排
+    head_col1, head_col2 = st.columns([1, 5])
+    with head_col1:
+        try:
+            logo = Image.open('logo.png')
+            st.image(logo, width=90)
+        except:
+            st.write("🌐")
+    with head_col2:
+        st.markdown(
+            '<div class="stHeader"><h1 style="color:white; margin:0; border:none;">国际中文教育数智产品检索平台</h1></div>',
+            unsafe_allow_html=True)
 
-# 顶部标题栏 (Logo + 文字)
-col_logo, col_title = st.columns([1, 6])
-with col_logo:
-    try:
-        logo = Image.open('logo.png')  # 请确保文件名正确
-        st.image(logo, width=80)
-    except:
-        st.write("⚓")  # 如果没图，显示锚点图标
-
-with col_title:
-    st.markdown('<div class="header-text">国际中文教育数智产品检索平台</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-header">同济大学国际文化交流学院</div>', unsafe_allow_html=True)
 
-# 导航按钮
-nav_col1, nav_col2, nav_col3 = st.columns([1, 1, 2])
-with nav_col1:
-    if st.button("🌐 网站检索", type="primary" if st.session_state.page_type == '网站' else "secondary"):
-        st.session_state.page_type = '网站'
-with nav_col2:
-    if st.button("📱 APP 检索", type="primary" if st.session_state.page_type == 'app' else "secondary"):
-        st.session_state.page_type = 'app'
+# --- 5. 导航切换 (网站 vs APP) ---
+# 使用 st.tabs 或者 按钮来实现美观的切换
+tab_web, tab_app = st.tabs(["🌐 网站检索 (Website Search)", "📱 APP 检索 (APP Search)"])
 
-# --- 5. 业务逻辑分离 ---
-
-if st.session_state.page_type == '网站':
-    # --- 网站检索页面 ---
-    df = load_data(file_path, '网站工作本')  # 对应第一个Sheet名
-
-    if df is not None:
-        # 侧边栏筛选器
-        st.sidebar.header("🔍 网站筛选")
-        sc = st.sidebar.multiselect("🌍 国家/地区", sorted(df['国家/地区'].unique()))
-        st_cat = st.sidebar.multiselect("📚 类别", sorted(df['类别'].unique()))
-        sf = st.sidebar.multiselect("💰 是否免费", sorted(df['是否免费'].unique()))
-        query = st.sidebar.text_input("📝 搜索名称")
+# --- 6. 逻辑分支：网站检索 ---
+with tab_web:
+    df_web = load_data(file_path, '网站工作本')
+    if df_web is not None:
+        # 侧边栏筛选
+        with st.sidebar:
+            st.header("🔍 网站筛选")
+            sc = st.multiselect("🌍 国家/地区", sorted(df_web['国家/地区'].unique()), key="web_country")
+            st_cat = st.multiselect("📚 类别", sorted(df_web['类别'].unique()), key="web_cat")
+            sf = st.multiselect("💰 是否免费", sorted(df_web['是否免费'].unique()), key="web_free")
+            q_web = st.text_input("📝 搜索网站名称", key="search_web")
 
         # 过滤
-        f_df = df.copy()
-        if sc: f_df = f_df[f_df['国家/地区'].isin(sc)]
-        if st_cat: f_df = f_df[f_df['类别'].isin(st_cat)]
-        if sf: f_df = f_df[f_df['是否免费'].isin(sf)]
-        if query: f_df = f_df[f_df['网站名称'].str.contains(query, case=False)]
+        f_web = df_web.copy()
+        if sc: f_web = f_web[f_web['国家/地区'].isin(sc)]
+        if st_cat: f_web = f_web[f_web['类别'].isin(st_cat)]
+        if sf: f_web = f_web[f_web['是否免费'].isin(sf)]
+        if q_web: f_web = f_web[f_web['网站名称'].str.contains(q_web, case=False)]
 
-        # 展示
-        st.markdown(f'<p class="result-count">✨ 网站库：共检索到 <b>{len(f_df)}</b> 条记录</p>', unsafe_allow_html=True)
-        for _, row in f_df.iterrows():
+        # 报数
+        st.markdown(f'<p class="result-count">✨ 网站库：共检索到 <b>{len(f_web)}</b> 条符合条件的记录</p>',
+                    unsafe_allow_html=True)
+
+        # 循环渲染卡片
+        for idx, row in f_web.iterrows():
             with st.container():
                 c1, c2 = st.columns([4, 1])
                 with c1:
                     st.markdown(f"#### {row['网站名称']}")
+                    st.markdown(f"""
+                        <div class="tag-container">
+                            <span class="tag tag-blue">📍 {row['国家/地区']}</span>
+                            <span class="tag tag-green">📁 {row['类别']}</span>
+                            <span class="tag tag-orange">💳 {row['是否免费']}</span>
+                        </div>
+                    """, unsafe_allow_html=True)
                     st.markdown(
-                        f'<span class="tag">📍 {row["国家/地区"]}</span><span class="tag">📁 {row["类别"]}</span><span class="tag">💰 {row["是否免费"]}</span>',
+                        f"<small style='color: #888;'>状态：{'✅ 有效' if row['是否有效'] == '是' else '❌ 失效'} | 更新：{row['是否更新']}</small>",
                         unsafe_allow_html=True)
                 with c2:
-                    st.link_button("访问网站", row['网址'], use_container_width=True)
-                with st.expander("查看详情"):
-                    st.write(f"**简介：** {row['网站简介']}")
-                    st.write(f"**开发者：** {row['开发者']}")
-                st.divider()
+                    st.write("")  # 间距
+                    st.link_button("🔗 访问网站", str(row['网址']), use_container_width=True, key=f"web_link_{idx}")
+                with st.expander("🔍 查看详细介绍"):
+                    st.write(f"**【简介】** {row['网站简介']}")
+                    st.write(f"**【开发者】** {row['开发者']}")
+                st.markdown("<hr style='margin:10px 0; border:0.5px solid #eee;'>", unsafe_allow_html=True)
 
-else:
-    # --- APP 检索页面 ---
-    df = load_data(file_path, 'app')  # 对应第二个Sheet名
+# --- 7. 逻辑分支：APP 检索 ---
+with tab_app:
+    df_app = load_data(file_path, 'app')
+    if df_app is not None:
+        with st.sidebar:
+            st.header("🔍 APP 筛选")
+            s_open = st.multiselect("✅ 是否可打开", sorted(df_app['是否可以打开'].unique()), key="app_open")
+            s_up = st.multiselect("🔄 是否仍在更新", sorted(df_app['是否仍在更新'].unique()), key="app_up")
+            q_app = st.text_input("📝 搜索名称 (中/英)", key="search_app")
 
-    if df is not None:
-        # 侧边栏筛选器 (根据APP表结构定制)
-        st.sidebar.header("🔍 APP 筛选")
-        # 提取筛选条件
-        s_open = st.sidebar.multiselect("✅ 是否可打开", sorted(df['是否可以打开'].unique()))
-        s_up = st.sidebar.multiselect("🔄 是否更新", sorted(df['是否仍在更新'].unique()))
-        query = st.sidebar.text_input("📝 搜索名称 (中/英)")
+        # 过滤
+        f_app = df_app.copy()
+        if s_open: f_app = f_app[f_app['是否可以打开'].isin(s_open)]
+        if s_up: f_app = f_app[f_app['是否仍在更新'].isin(s_up)]
+        if q_app:
+            f_app = f_app[
+                f_app['中文名称'].str.contains(q_app, case=False) | f_app['英文名称'].str.contains(q_app, case=False)]
 
-        # 过滤逻辑
-        f_df = df.copy()
-        if s_open: f_df = f_df[f_df['是否可以打开'].isin(s_open)]
-        if s_up: f_df = f_df[f_df['是否仍在更新'].isin(s_up)]
-        if query:
-            f_df = f_df[
-                f_df['中文名称'].str.contains(query, case=False) | f_df['英文名称'].str.contains(query, case=False)]
+        st.markdown(f'<p class="result-count">✨ APP库：共检索到 <b>{len(f_app)}</b> 条符合条件的记录</p>',
+                    unsafe_allow_html=True)
 
-        # 展示
-        st.markdown(f'<p class="result-count">✨ APP库：共检索到 <b>{len(f_df)}</b> 条记录</p>', unsafe_allow_html=True)
-        for _, row in f_df.iterrows():
+        for idx, row in f_app.iterrows():
+            # 确定显示名称 (有中文显示中文，没中文显示英文)
+            name = row['中文名称'] if row['中文名称'] != "无" else row['英文名称']
+
             with st.container():
                 c1, c2 = st.columns([4, 1])
                 with c1:
-                    # 显示中文名，如果没有则显示英文名
-                    display_name = row['中文名称'] if row['中文名称'] != '*' else row['英文名称']
-                    st.markdown(f"#### {display_name}")
-
-                    # 状态标签
-                    tag_open = "🟢 可打开" if row['是否可以打开'] == "是" else "🔴 无法打开"
-                    tag_up = "🔄 持续更新" if "持续更新" in str(row['是否仍在更新']) else "⏹️ 停止更新"
-                    st.markdown(f'<span class="tag">{tag_open}</span><span class="tag">{tag_up}</span>',
-                                unsafe_allow_html=True)
-
+                    st.markdown(f"#### {name}")
+                    st.markdown(f"""
+                        <div class="tag-container">
+                            <span class="tag tag-blue">状态：{row['是否可以打开']}</span>
+                            <span class="tag tag-green">更新：{row['是否仍在更新']}</span>
+                        </div>
+                    """, unsafe_allow_html=True)
                 with c2:
-                    # 如果有网站链接则显示
-                    if row['网站'] != '*' and row['网站'] != '无':
-                        st.link_button("获取/官网", str(row['网站']), use_container_width=True)
+                    st.write("")  # 间距
+                    if row['网站'] != "无":
+                        st.link_button("🔗 立即获取", str(row['网站']), use_container_width=True, key=f"app_link_{idx}")
                     else:
-                        st.button("暂无链接", disabled=True, use_container_width=True)
+                        # 修复 Duplicate ID 报错的关键点：增加 key=f"disabled_{idx}"
+                        st.button("🚫 暂无链接", disabled=True, use_container_width=True, key=f"disabled_btn_{idx}")
 
-                with st.expander("查看详细信息"):
-                    st.write(f"**中文全称：** {row['中文名称']}")
-                    st.write(f"**英文全称：** {row['英文名称']}")
-                    st.write(f"**研发单位：** {row['研发单位']}")
-                st.divider()
+                with st.expander("🔍 查看详细数据"):
+                    col_a, col_b = st.columns(2)
+                    with col_a:
+                        st.write(f"**中文全称：** {row['中文名称']}")
+                        st.write(f"**英文全称：** {row['英文名称']}")
+                    with col_b:
+                        st.write(f"**研发单位：** {row['研发单位']}")
+                st.markdown("<hr style='margin:10px 0; border:0.5px solid #eee;'>", unsafe_allow_html=True)
 
-# --- 6. 页脚 ---
+# --- 8. 页脚 ---
 st.markdown(
-    "<center style='color: #bbb; font-size: 0.8rem; margin-top: 50px;'>© 2024 同济大学国际文化交流学院 · 国际中文教育数智化项目组</center>",
+    "<br><center style='color: #999; font-size: 0.8rem;'>© 2024 同济大学国际文化交流学院 · 国际中文教育数智化项目组</center>",
     unsafe_allow_html=True)
